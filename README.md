@@ -1,0 +1,133 @@
+# dsh-project-groups · DeepSeek Harness 项目组插件
+
+在**同一个会话**里跨多个项目文件夹工作：把一组项目文件夹组织成一个「项目组」，agent 可以直接读写组内任意文件夹的文件、列出目录、运行命令（git / npm / 构建等），并随时切换当前文件夹——无需为每个项目另开会话。
+
+## 功能
+
+- **项目组**：一个组 = 多个项目文件夹，可任意增删、重命名、设为当前
+- **跨文件夹工作**：宿主端注册 `project` 模型工具，可在任意已注册文件夹内
+  - `list` / `set_active` — 查看项目组、切换当前文件夹
+  - `readFile` / `writeFile` / `listDir` — 读写文件、列目录（路径限制在注册的文件夹内，越界拒绝）
+  - `run` — 运行命令（经 PowerShell，自动探测 pwsh / Windows PowerShell 5.1）
+- **UI**：
+  - 设置 → 「项目组」管理页（创建组、添加/移除文件夹、设为当前）
+  - 输入框上方的状态条（当前项目组 › 当前文件夹，下拉快速切换）
+- **持久化**：配置存于 dsh settings（`settings.yaml`），重启不丢
+- **上下文感知**：agent 的提示词自动带上当前项目组与文件夹列表
+- 动作名兼容别名：`read`/`write`/`list_dir`/`set_active` 等
+
+> 为什么不在左侧栏？侧栏的「工作区区域上方」没有可追加的插槽——只有替换整个侧栏外壳才能放内容，会破坏原始侧栏样式（设置入口等）。因此本项目采用**纯追加式插槽**（设置页 + 输入框状态条），完全不改动原始界面。
+
+## 架构
+
+| 部分 | 机制 |
+| --- | --- |
+| 宿主插件 `lib/index.js` | 状态注册表 + `/api/project-groups` HTTP API（webServer 路由）+ `project` 模型工具（tools）+ 提示词上下文（systemPrompt）+ settings 持久化 |
+| 浏览器插件 `lib/client.js` | `__ModuleLoader__` bundle，注册 `settings.section` 与 `conversation.input.dock` 两个追加插槽，通过 fetch 调用宿主 API |
+| 通信 | 浏览器 → `/api/project-groups`（GET 查询 / POST 变更，JSON） |
+| 依赖 | `@deepseek-ai/dsh-tools`、`@deepseek-ai/schemastery`、`@deepseek-ai/dsh-settings`（均随 dsh 安装提供） |
+
+宿主插件通过 `inject: ['settings','webServer','tools','systemPrompt']` 等待核心服务挂载后再激活。
+
+## 安装
+
+### 前置条件
+
+- 已安装 DeepSeek Harness（`dsh` CLI，本插件按 web profile 编写）
+- 已初始化过目标 profile（存在 `$DSH_HOME/profiles/web/`，默认 `C:\Users\<你>\.dsh\profiles\web\`）
+- Windows（依赖 junction 目录链接与 PowerShell）
+
+### 方式一：自动安装脚本（推荐）
+
+把本仓库下载/克隆到本地后，在 PowerShell 中运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File <仓库路径>\install.ps1
+# 可选参数：-DshHome 指定 DSH_HOME；-ProfileName 指定 profile（默认 web）
+```
+
+脚本会：
+1. 把插件文件复制到 `$DSH_HOME/profiles/<profile>/plugins/dsh-project-groups/`
+2. 创建两个目录链接（junction）：
+   - `$DSH_HOME/profiles/node_modules/dsh-project-groups`（客户端模块表解析）
+   - dsh 安装目录的 `node_modules/dsh-project-groups`（宿主 loader 解析裸包名）
+3. 幂等地在 `cordis.patch.yml` 追加插件行
+4. 打印重启与验证步骤
+
+> 若第 2 步的「安装侧」链接因权限失败（如 dsh 装在需要管理员的位置），请用管理员 PowerShell 重试，或手动创建链接（见方式二）。
+
+### 方式二：手动安装
+
+以默认 profile `web` 为例（`$DSH_HOME = C:\Users\<你>\.dsh`）：
+
+1. **放置插件**：把本仓库复制为
+   `C:\Users\<你>\.dsh\profiles\web\plugins\dsh-project-groups\`
+
+2. **创建目录链接**（PowerShell，两条都要）：
+
+   ```powershell
+   $target = 'C:\Users\<你>\.dsh\profiles\web\plugins\dsh-project-groups'
+   # ① profile 侧（客户端模块表）
+   New-Item -ItemType Junction -Path 'C:\Users\<你>\.dsh\profiles\node_modules\dsh-project-groups' -Target $target
+   # ② 安装侧（宿主 loader）。把 <dsh-install> 换成 dsh 安装位置，例如：
+   #    D:\Program Files\nodejs\node_cache\_npx\xxxxxxxx\node_modules
+   New-Item -ItemType Junction -Path '<dsh-install>\node_modules\dsh-project-groups' -Target $target
+   ```
+
+   > ② 是必须的：宿主 loader 对裸包名的解析以 dsh 安装目录为基准；只做 ① 时客户端能加载但宿主端（API/工具）不生效。
+   > 不确定安装目录？在 profile 目录执行：
+   > `node -e "const {createRequire}=require('module');console.log(createRequire(process.cwd()+'/cordis.yml').resolve('@deepseek-ai/dsh-base/package.json'))"`
+   > 取结果中 `node_modules` 之前的路径。
+
+3. **注册插件行**：编辑 `C:\Users\<你>\.dsh\profiles\web\cordis.patch.yml`，追加：
+
+   ```yaml
+   - insert:
+       - id: project-groups
+         name: dsh-project-groups
+   ```
+
+4. **重启 dsh**：在启动 dsh 的终端 Ctrl+C，然后重新运行 `dsh web`（或 `dsh --profile web`）。也可以运行仓库里的 `restart.ps1`（自动找 3080 端口进程 → 停止 → 重启 → 验证）。
+
+5. **刷新浏览器**（Ctrl+F5），打开 **设置 → 项目组** 即可使用。
+
+### 验证安装
+
+- 浏览器打开 `http://127.0.0.1:3080/api/project-groups`，应返回 `{"groups":[...],...}`（未配置时为空列表）
+- 设置页出现「项目组」；输入框上方出现项目组状态条
+- 对话中 agent 的上下文出现「项目组：…」行
+
+## 使用示例
+
+在对话里直接说：
+
+- “把 `E:\proj-a` 和 `E:\proj-b` 加进项目组「后端」，当前用 proj-a”
+- “在 QzoneDown-Go 里看下 go.mod”
+- “对 SSL-Assistant 跑一下 `git status`”
+- “切换到 SSL-Assistant”
+
+agent 会用 `project` 工具完成，全部在同一个会话内。
+
+## 卸载
+
+1. 从 `cordis.patch.yml` 删除新增的 `insert` 块
+2. 删除两个 `dsh-project-groups` junction 目录链接
+3. （可选）删除 `plugins\dsh-project-groups` 目录
+4. 重启 dsh 并刷新页面
+
+配置（settings.yaml 里的 `project-groups:` 段）可手动删除。
+
+## 常见问题
+
+**Q: 重启后 agent 的普通文件工具（read/write/pwsh）还是不能访问项目文件夹？**
+这是 dsh 的会话沙箱设计：普通工具被限制在会话工作区内。`project` 工具是插件自带的通道，不受该限制（写入以目标文件夹为沙箱根）。
+
+**Q: 为什么不在左侧栏显示？**
+见上方「为什么不在左侧栏」：没有可追加的插槽，替换侧栏会破坏原始样式。
+
+**Q: 改代码后如何生效？**
+lib/ 改完 → 重启 dsh（宿主）→ 刷新浏览器（客户端 bundle 会以新 rev 下发）。
+
+## License
+
+MIT

@@ -1,0 +1,39 @@
+{
+  "name": "dsh-project-groups",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness 项目组插件：在一个会话中跨多个项目文件夹工作——读写组内文件、运行命令、快速切换当前文件夹。配置持久化（settings），重启不丢。",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "project-groups",
+    "workspace"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE",
+    "install.ps1",
+    "restart.ps1"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/<YOUR-GITHUB-USERNAME>/dsh-project-groups.git"
+  }
+}
