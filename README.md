@@ -1,4 +1,4 @@
-# dsh-project-groups · DeepSeek Harness 项目组插件
+# dsh-ProjectModel · DeepSeek Harness 项目组插件
 
 在**同一个会话**里跨多个项目文件夹工作：把一组项目文件夹组织成一个「项目组」，agent 可以直接读写组内任意文件夹的文件、列出目录、运行命令（git / npm / 构建等），并随时切换当前文件夹——无需为每个项目另开会话。
 
@@ -51,10 +51,10 @@ node install.mjs
 ```
 
 脚本会：
-1. 把插件文件复制到 `$DSH_HOME/profiles/<profile>/plugins/dsh-project-groups/`
+1. 把插件文件复制到 `$DSH_HOME/profiles/<profile>/plugins/dsh-ProjectModel/`
 2. 创建两个目录链接（Windows 用 junction，其他平台用 symlink）：
-   - `$DSH_HOME/profiles/node_modules/dsh-project-groups`（客户端模块表解析）
-   - dsh 安装目录的 `node_modules/dsh-project-groups`（宿主 loader 解析裸包名）
+   - `$DSH_HOME/profiles/node_modules/dsh-ProjectModel`（客户端模块表解析）
+   - dsh 安装目录的 `node_modules/dsh-ProjectModel`（宿主 loader 解析裸包名）
    - 已存在且指向正确时自动跳过（幂等）；指向别处时警告保留，`--force` 才改指
 3. 幂等地在 `cordis.patch.yml` 追加插件行
 4. 打印重启与验证步骤（或 `--auto` 直接重启）
@@ -66,17 +66,17 @@ node install.mjs
 以默认 profile `web` 为例（`$DSH_HOME = C:\Users\<你>\.dsh`）：
 
 1. **放置插件**：把本仓库复制为
-   `C:\Users\<你>\.dsh\profiles\web\plugins\dsh-project-groups\`
+   `C:\Users\<你>\.dsh\profiles\web\plugins\dsh-ProjectModel\`
 
 2. **创建目录链接**（两条都要，Windows 用 junction）：
 
    ```powershell
-   $target = 'C:\Users\<你>\.dsh\profiles\web\plugins\dsh-project-groups'
+   $target = 'C:\Users\<你>\.dsh\profiles\web\plugins\dsh-ProjectModel'
    # ① profile 侧（客户端模块表）
-   New-Item -ItemType Junction -Path 'C:\Users\<你>\.dsh\profiles\node_modules\dsh-project-groups' -Target $target
+   New-Item -ItemType Junction -Path 'C:\Users\<你>\.dsh\profiles\node_modules\dsh-ProjectModel' -Target $target
    # ② 安装侧（宿主 loader）。把 <dsh-install> 换成 dsh 安装位置，例如：
    #    D:\Program Files\nodejs\node_cache\_npx\xxxxxxxx\node_modules
-   New-Item -ItemType Junction -Path '<dsh-install>\node_modules\dsh-project-groups' -Target $target
+   New-Item -ItemType Junction -Path '<dsh-install>\node_modules\dsh-ProjectModel' -Target $target
    ```
 
    > ② 是必须的：宿主 loader 对裸包名的解析以 dsh 安装目录为基准；只做 ① 时客户端能加载但宿主端（API/工具）不生效。
@@ -89,7 +89,7 @@ node install.mjs
    ```yaml
    - insert:
        - id: project-groups
-         name: dsh-project-groups
+         name: dsh-ProjectModel
    ```
 
 4. **重启 dsh**：在启动 dsh 的终端 Ctrl+C，然后重新运行 `dsh web`（或 `dsh --profile web`）。
@@ -118,8 +118,8 @@ agent 会用 `project` 工具完成，全部在同一个会话内。
 ## 卸载
 
 1. 从 `cordis.patch.yml` 删除新增的 `insert` 块
-2. 删除两个 `dsh-project-groups` junction 目录链接
-3. （可选）删除 `plugins\dsh-project-groups` 目录
+2. 删除两个 `dsh-ProjectModel` junction 目录链接
+3. （可选）删除 `plugins\dsh-ProjectModel` 目录
 4. 重启 dsh 并刷新页面
 
 配置（settings.yaml 里的 `project-groups:` 段）可手动删除。

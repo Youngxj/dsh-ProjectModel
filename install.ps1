@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-  Install dsh-project-groups plugin into a dsh profile.
+  Install dsh-ProjectModel plugin into a dsh profile.
 .DESCRIPTION
-  1. Copy plugin files to $DSH_HOME/profiles/<profile>/plugins/dsh-project-groups/
+  1. Copy plugin files to $DSH_HOME/profiles/<profile>/plugins/dsh-ProjectModel/
   2. Create two directory junctions: profile side (client module table)
      and install side (host loader bare-name resolution)
   3. Idempotently append the plugin row to cordis.patch.yml
@@ -17,7 +17,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$pluginName = 'dsh-project-groups'
+$pluginName = 'dsh-ProjectModel'
 $profileDir = Join-Path $DshHome (Join-Path 'profiles' $ProfileName)
 $pluginTarget = Join-Path $profileDir (Join-Path 'plugins' $pluginName)
 $patchFile = Join-Path $profileDir 'cordis.patch.yml'
@@ -67,10 +67,10 @@ if ($content -match 'project-groups') {
 } else {
   $addition = @'
 
-# ---- user-installed: dsh-project-groups ----
+# ---- user-installed: dsh-ProjectModel ----
 - insert:
     - id: project-groups
-      name: dsh-project-groups
+      name: dsh-ProjectModel
 '@
   Add-Content -Path $patchFile -Value $addition -Encoding UTF8
   Write-Host '    plugin row appended.'

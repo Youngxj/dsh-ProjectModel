@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * dsh-project-groups — one-command Node installer.
+ * dsh-ProjectModel — one-command Node installer.
  *
  *   node install.mjs
  *   node install.mjs --home D:\mydsh --profile web
  *   node install.mjs --auto          # install, then restart the web service
  *
  * Steps:
- *   1. copy plugin files to $DSH_HOME/profiles/<profile>/plugins/dsh-project-groups/
+ *   1. copy plugin files to $DSH_HOME/profiles/<profile>/plugins/dsh-ProjectModel/
  *   2. create directory links (junction on Windows, symlink elsewhere):
- *        profile side  -> $DSH_HOME/profiles/node_modules/dsh-project-groups
- *        install side  -> <dsh install>/node_modules/dsh-project-groups
+ *        profile side  -> $DSH_HOME/profiles/node_modules/dsh-ProjectModel
+ *        install side  -> <dsh install>/node_modules/dsh-ProjectModel
  *   3. idempotently append the plugin row to cordis.patch.yml
  *   4. print restart & verification steps (or restart with --auto)
  */
@@ -24,7 +24,7 @@ import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 const SELF_DIR = dirname(fileURLToPath(import.meta.url))
-const PLUGIN_NAME = 'dsh-project-groups'
+const PLUGIN_NAME = 'dsh-ProjectModel'
 
 const args = process.argv.slice(2)
 const option = (name, fallback) => {
@@ -116,10 +116,10 @@ if (installRoot && existsSync(installRoot)) {
 // ---- 3. register the plugin row --------------------------------------------
 log('==> [3/4] registering plugin row in cordis.patch.yml...')
 const block = `
-# ---- user-installed: dsh-project-groups ----
+# ---- user-installed: dsh-ProjectModel ----
 - insert:
     - id: project-groups
-      name: dsh-project-groups
+      name: dsh-ProjectModel
 `
 let content = ''
 try {

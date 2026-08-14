@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * dsh-project-groups — restart the DeepSeek Harness web service.
+ * dsh-ProjectModel — restart the DeepSeek Harness web service.
  *
  *   node restart.mjs
  *   node restart.mjs --port 3080
