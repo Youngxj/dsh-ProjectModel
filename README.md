@@ -35,35 +35,40 @@
 
 - 已安装 DeepSeek Harness（`dsh` CLI，本插件按 web profile 编写）
 - 已初始化过目标 profile（存在 `$DSH_HOME/profiles/web/`，默认 `C:\Users\<你>\.dsh\profiles\web\`）
-- Windows（依赖 junction 目录链接与 PowerShell）
+- Node.js（安装器是 `install.mjs`，直接 `node` 运行，无任何依赖）
 
-### 方式一：自动安装脚本（推荐）
+### 方式一：Node 一键安装（推荐）
 
-把本仓库下载/克隆到本地后，在 PowerShell 中运行：
+把本仓库克隆/下载到本地后，在 PowerShell、cmd 或任意终端里：
 
-```powershell
-powershell -ExecutionPolicy Bypass -File <仓库路径>\install.ps1
-# 可选参数：-DshHome 指定 DSH_HOME；-ProfileName 指定 profile（默认 web）
+```bash
+node install.mjs
+# 可选参数：
+#   --home <目录>   指定 DSH_HOME（默认 ~/.dsh）
+#   --profile <名>  指定 profile（默认 web）
+#   --auto          装完自动重启 dsh web（内部调用 restart.mjs）
+#   --force         已有目录链接指向别处时强制改指
 ```
 
 脚本会：
 1. 把插件文件复制到 `$DSH_HOME/profiles/<profile>/plugins/dsh-project-groups/`
-2. 创建两个目录链接（junction）：
+2. 创建两个目录链接（Windows 用 junction，其他平台用 symlink）：
    - `$DSH_HOME/profiles/node_modules/dsh-project-groups`（客户端模块表解析）
    - dsh 安装目录的 `node_modules/dsh-project-groups`（宿主 loader 解析裸包名）
+   - 已存在且指向正确时自动跳过（幂等）；指向别处时警告保留，`--force` 才改指
 3. 幂等地在 `cordis.patch.yml` 追加插件行
-4. 打印重启与验证步骤
+4. 打印重启与验证步骤（或 `--auto` 直接重启）
 
-> 若第 2 步的「安装侧」链接因权限失败（如 dsh 装在需要管理员的位置），请用管理员 PowerShell 重试，或手动创建链接（见方式二）。
+重启后刷新浏览器即可。重启也可以用仓库里的 `node restart.mjs`（自动找端口进程 → 停止 → 重启 → 验证 `/api/project-groups`）。
 
-### 方式二：手动安装
+### 方式二：手动安装（不依赖本仓库脚本）
 
 以默认 profile `web` 为例（`$DSH_HOME = C:\Users\<你>\.dsh`）：
 
 1. **放置插件**：把本仓库复制为
    `C:\Users\<你>\.dsh\profiles\web\plugins\dsh-project-groups\`
 
-2. **创建目录链接**（PowerShell，两条都要）：
+2. **创建目录链接**（两条都要，Windows 用 junction）：
 
    ```powershell
    $target = 'C:\Users\<你>\.dsh\profiles\web\plugins\dsh-project-groups'
@@ -75,7 +80,7 @@ powershell -ExecutionPolicy Bypass -File <仓库路径>\install.ps1
    ```
 
    > ② 是必须的：宿主 loader 对裸包名的解析以 dsh 安装目录为基准；只做 ① 时客户端能加载但宿主端（API/工具）不生效。
-   > 不确定安装目录？在 profile 目录执行：
+   > 不确定安装目录？执行：
    > `node -e "const {createRequire}=require('module');console.log(createRequire(process.cwd()+'/cordis.yml').resolve('@deepseek-ai/dsh-base/package.json'))"`
    > 取结果中 `node_modules` 之前的路径。
 
@@ -87,9 +92,11 @@ powershell -ExecutionPolicy Bypass -File <仓库路径>\install.ps1
          name: dsh-project-groups
    ```
 
-4. **重启 dsh**：在启动 dsh 的终端 Ctrl+C，然后重新运行 `dsh web`（或 `dsh --profile web`）。也可以运行仓库里的 `restart.ps1`（自动找 3080 端口进程 → 停止 → 重启 → 验证）。
+4. **重启 dsh**：在启动 dsh 的终端 Ctrl+C，然后重新运行 `dsh web`（或 `dsh --profile web`）。
 
 5. **刷新浏览器**（Ctrl+F5），打开 **设置 → 项目组** 即可使用。
+
+> 仓库里还保留了一份 `install.ps1`（PowerShell 版安装器）。早期版本以 PowerShell 提供，是因为安装动作（junction 链接、与 dsh 的 PowerShell 生态交互）在 PowerShell 里最直接；后来改成了更合理的 Node 版：dsh 本身是 Node 应用、无 PowerShell 编码坑、跨平台、零依赖。两个版本行为一致，二选一即可。
 
 ### 验证安装
 

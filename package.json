@@ -29,6 +29,8 @@
     "lib",
     "README.md",
     "LICENSE",
+    "install.mjs",
+    "restart.mjs",
     "install.ps1",
     "restart.ps1"
   ],
