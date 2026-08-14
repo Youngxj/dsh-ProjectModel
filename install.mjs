@@ -127,11 +127,21 @@ try {
 } catch {
   /* file absent: start from scratch */
 }
-if (content.includes('project-groups')) {
-  log('    cordis.patch.yml already contains the plugin row; skipped')
+// A fresh profile ships a template file ending with a lone `[]` (an empty
+// top-level array). Appending after it would form a SECOND YAML document,
+// which the loader rejects ("end of the stream or a document separator is
+// expected"). Drop any lone `[]` marker line first, then append if needed.
+const kept = content.split(/\r?\n/).filter((line) => !/^\[\s*\]\s*$/.test(line))
+const normalized = kept.join('\n')
+const hasRow = normalized.includes('project-groups')
+const next = hasRow ? normalized : normalized + block
+if (next !== content) {
+  writeFileSync(patchFile, next)
+  log(hasRow
+    ? '    cordis.patch.yml normalized (removed empty [] marker)'
+    : '    plugin row appended')
 } else {
-  writeFileSync(patchFile, content + block)
-  log('    plugin row appended')
+  log('    cordis.patch.yml already contains the plugin row; skipped')
 }
 
 // ---- 4. next steps ----------------------------------------------------------

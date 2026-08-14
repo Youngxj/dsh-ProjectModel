@@ -61,19 +61,27 @@ if ($installRoot -and (Test-Path $installRoot)) {
 
 # ---- 3. register the plugin row -------------------------------------------
 Write-Host '==> [3/4] registering plugin row in cordis.patch.yml...'
-$content = if (Test-Path $patchFile) { Get-Content $patchFile -Raw -Encoding UTF8 } else { '' }
-if ($content -match 'project-groups') {
-  Write-Host '    cordis.patch.yml already contains the plugin row; skipped.'
-} else {
-  $addition = @'
+$addition = @'
 
 # ---- user-installed: dsh-ProjectModel ----
 - insert:
     - id: project-groups
       name: dsh-ProjectModel
 '@
-  Add-Content -Path $patchFile -Value $addition -Encoding UTF8
-  Write-Host '    plugin row appended.'
+$content = if (Test-Path $patchFile) { Get-Content $patchFile -Raw -Encoding UTF8 } else { '' }
+# A fresh profile template ends with a lone `[]` (empty array); appending after
+# it would form a second YAML document, which the loader rejects. Drop any lone
+# `[]` marker line first, then append if the row is not present yet.
+$kept = @($content -split "`r?`n" | Where-Object { $_ -notmatch '^\[\s*\]\s*$' })
+$normalized = $kept -join "`n"
+$hasRow = $normalized -match 'project-groups'
+if (-not $hasRow) { $normalized = $normalized + $addition }
+if ($normalized -ne $content) {
+  [System.IO.File]::WriteAllText($patchFile, $normalized, (New-Object System.Text.UTF8Encoding($false)))
+  if ($hasRow) { Write-Host '    cordis.patch.yml normalized (removed empty [] marker).' }
+  else { Write-Host '    plugin row appended.' }
+} else {
+  Write-Host '    cordis.patch.yml already contains the plugin row; skipped.'
 }
 
 # ---- 4. next steps ---------------------------------------------------------
